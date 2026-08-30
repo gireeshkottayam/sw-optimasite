@@ -1,0 +1,23 @@
+# Build artifacts (never commit update .zip packages)
+*.zip
+*.deploy.zip
+build/
+
+# Dev-only E2E harness (contains local DB credentials; never publish)
+tests/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Editor
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Local secrets / keys
+*.key
+*.pem
+.env
+*.env
