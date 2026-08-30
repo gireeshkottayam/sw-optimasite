@@ -3,7 +3,7 @@
  * Plugin Name:       OptimaSite — Site Health & Optimization Auditor
  * Plugin URI:        https://sharewire.in/product.php?product=sw-optimasite
  * Description:       Run a complete, local Site Health & Optimization audit: plugin conflicts and bloat, database bloat, slow queries, Core Web Vitals readiness, security hardening and obsolete setup — then apply safe, one-click fixes. Single-domain license with embedded Razorpay checkout and auto-updates powered by ShareWire.in (buy once, lifetime updates).
- * Version:           1.0.0
+ * Version:           1.1.0
  * Requires at least: 5.8
  * Requires PHP:      7.4
  * Author:            ShareWire.in
@@ -24,7 +24,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('OPTIMASITE_VERSION', '1.0.0');
+define('OPTIMASITE_VERSION', '1.1.0');
 define('OPTIMASITE_BASE', defined('SW_LICENSE_BASE') ? rtrim((string) SW_LICENSE_BASE, '/') : 'https://sharewire.in');
 define('OPTIMASITE_SLUG', 'sw-optimasite');           // ShareWire product slug (fixed)
 define('OPTIMASITE_BASENAME', plugin_basename(__FILE__)); // e.g. sw-optimasite/sw-optimasite.php

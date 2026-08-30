@@ -24,6 +24,70 @@ final class OptimaSite_Updater
         return self::CACHE . '_' . md5($key . '|' . $domain);
     }
 
+    /**
+     * Pending-update info, or null when nothing is offered.
+     * Returns data ONLY when the license is active AND bound to THIS domain AND a
+     * newer version with a real package exists. Never reveals an update to an
+     * unlicensed install (same no-leak rule as check()).
+     */
+    public static function available(): ?array
+    {
+        $key = OptimaSite_License::key();
+        if ($key === '' || !OptimaSite_License::is_valid()) {
+            return null;
+        }
+        $data = self::fetch_data($key, OptimaSite_Api::current_domain());
+        if ($data === null) {
+            return null;
+        }
+        if (empty($data['licensed']) || empty($data['package'])) {
+            return null;
+        }
+        if (version_compare(OPTIMASITE_VERSION, $data['new_version'], '>=')) {
+            return null;
+        }
+        return array(
+            'new_version' => $data['new_version'],
+            'package'     => $data['package'],
+            'url'         => $data['url'],
+        );
+    }
+
+    /** Single source of truth for the update payload (cached, armed-only). */
+    private static function fetch_data(string $key, string $domain): ?array
+    {
+        $ck = self::cache_key($key, $domain);
+        $data = get_transient($ck);
+        if ($data !== false) {
+            return $data;
+        }
+        $r = OptimaSite_Api::request('/api/update.php?product=' . rawurlencode(OPTIMASITE_SLUG)
+            . '&key=' . rawurlencode($key)
+            . '&domain=' . rawurlencode($domain)
+            . '&version=' . rawurlencode(OPTIMASITE_VERSION), array(), 'GET');
+        if (empty($r['ok']) || empty($r['new_version'])) {
+            return null;
+        }
+        $new_version = (string) $r['new_version'];
+        if (!preg_match('/^\d+(\.\d+){0,3}$/', $new_version)) {
+            return null; // refuse a malformed version from the server
+        }
+        $data = array(
+            'new_version' => $new_version,
+            'package'     => (string) ($r['package'] ?? ''),
+            'slug'        => (string) ($r['slug'] ?? OPTIMASITE_SLUG),
+            'plugin'      => (string) ($r['plugin'] ?? OPTIMASITE_BASENAME),
+            'url'         => (string) ($r['url'] ?? ''),
+            'requires'    => (string) ($r['requires'] ?? '5.8'),
+            'tested'      => (string) ($r['tested'] ?? '6.4'),
+            'requires_php'=> (string) ($r['requires_php'] ?? '7.4'),
+            'changelog'   => (string) ($r['changelog'] ?? ''),
+            'licensed'    => !empty($r['licensed']),
+        );
+        set_transient($ck, $data, HOUR_IN_SECONDS);
+        return $data;
+    }
+
     /** Called by the WP updater on each update screen load. */
     public static function check($transient)
     {
@@ -35,31 +99,9 @@ final class OptimaSite_Updater
             // No valid license — do not present an update (and never leak a package).
             return $transient;
         }
-        $domain = OptimaSite_Api::current_domain();
-        $ck = self::cache_key($key, $domain);
-
-        $data = get_transient($ck);
-        if ($data === false) {
-            $r = OptimaSite_Api::request('/api/update.php?product=' . rawurlencode(OPTIMASITE_SLUG)
-                . '&key=' . rawurlencode($key)
-                . '&domain=' . rawurlencode($domain)
-                . '&version=' . rawurlencode(OPTIMASITE_VERSION), array(), 'GET');
-            if (empty($r['ok']) || empty($r['new_version'])) {
-                return $transient;
-            }
-            $data = array(
-                'new_version' => (string) $r['new_version'],
-                'package'     => (string) ($r['package'] ?? ''),
-                'slug'        => (string) ($r['slug'] ?? OPTIMASITE_SLUG),
-                'plugin'      => (string) ($r['plugin'] ?? OPTIMASITE_BASENAME),
-                'url'         => (string) ($r['url'] ?? ''),
-                'requires'    => (string) ($r['requires'] ?? '5.8'),
-                'tested'      => (string) ($r['tested'] ?? '6.4'),
-                'requires_php'=> (string) ($r['requires_php'] ?? '7.4'),
-                'changelog'   => (string) ($r['changelog'] ?? ''),
-                'licensed'    => !empty($r['licensed']),
-            );
-            set_transient($ck, $data, HOUR_IN_SECONDS);
+        $data = self::fetch_data($key, OptimaSite_Api::current_domain());
+        if ($data === null) {
+            return $transient;
         }
 
         if (empty($data['licensed']) || empty($data['package'])) {

@@ -37,6 +37,33 @@ final class OptimaSite_Admin
         }
         add_action('admin_enqueue_scripts', array(__CLASS__, 'assets'));
         add_action('admin_notices', array(__CLASS__, 'locked_notice'));
+        add_action('admin_notices', array(__CLASS__, 'update_notice'));
+    }
+
+    /**
+     * In-dashboard "update available" banner (Rule 6). Shown only to admins of a
+     * licensed + domain-bound install when ShareWire reports a newer version.
+     * Mirrors the native WP update screen; links there to actually update.
+     */
+    public static function update_notice(): void
+    {
+        if (!current_user_can('manage_options') || !OptimaSite_License::is_valid()) {
+            return;
+        }
+        $u = OptimaSite_Updater::available();
+        if ($u === null) {
+            return;
+        }
+        $upd = self::plugin_update_url();
+        echo '<div class="notice notice-info" style="border-left-color:#37e0a5"><p>'
+            . esc_html__('OptimaSite update available: version ', 'sw-optimasite')
+            . '<strong>' . esc_html($u['new_version']) . '</strong>. '
+            . '<a href="' . esc_url($upd) . '">' . esc_html__('Update now', 'sw-optimasite') . '</a></p></div>';
+    }
+
+    private static function plugin_update_url(): string
+    {
+        return network_admin_url('plugins.php?plugin_status=upgrade');
     }
 
     public static function assets(string $hook): void

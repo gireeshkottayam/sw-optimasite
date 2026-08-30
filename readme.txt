@@ -4,7 +4,7 @@ Tags: site health, audit, optimization, performance, security, database, cleanup
 Requires at least: 5.8
 Tested up to: 6.4
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 1.1.0
 License: GPL-2.0-or-later
 
 A complete local site health and optimization audit with safe, one-click fixes — plugin conflicts and bloat, database bloat, slow queries, Core Web Vitals readiness, security hardening and obsolete setup. Single-domain license with embedded Razorpay checkout and auto-updates, powered by ShareWire.in.
@@ -46,6 +46,9 @@ secure.
 = Are the fixes safe? = Yes. Nothing runs automatically on activation. Database and cleanup actions require you to confirm you have a backup before they run, and everything is recorded in an action log. You choose which fixes to apply.
 
 == Changelog ==
+
+= 1.1.0 =
+* Add an in-dashboard "update available" banner on the audit page when a newer build is published (licensed, single-domain installs only). Hardened update payload parsing (version format validation).
 
 = 1.0.0 =
 * Initial release: full local Site Health audit (plugins, database, DB health, Core Web Vitals, security, setup), safe one-click fixes, embedded Razorpay checkout, single-domain activation and native WordPress auto-updates via ShareWire.
