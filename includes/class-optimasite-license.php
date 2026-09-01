@@ -67,7 +67,14 @@ final class OptimaSite_License
             self::refresh();
             $st = self::state();
         }
-        return (bool) apply_filters('optimasite_active', !empty($st['valid']));
+        $base = (bool) apply_filters('optimasite_active', !empty($st['valid']));
+        if (!$base) {
+            return false;
+        }
+        // Anti-crack gate: the paid state only survives when the guard is
+        // intact (valid license, valid per license signature, pristine
+        // package). Any doubt degrades to not licensed and revalidates.
+        return OptimaSite_Guard::paid_check();
     }
 
     public static function locked(): bool
@@ -87,12 +94,16 @@ final class OptimaSite_License
             return $r;
         }
         self::set_key($key);
+        OptimaSite_Guard::store_secret((string) ($r['lic_secret'] ?? ''));
+        $licOk = OptimaSite_Guard::verify_signed($r);
+        OptimaSite_Guard::stamp();
         update_option(self::STATE_OPT, array(
             'valid'      => true,
             'status'     => 'active',
             'domain'     => OptimaSite_Api::current_domain(),
             'site_token' => $r['site_token'] ?? '',
             'key_tail'   => substr($key, -4),
+            'lic_ok'     => $licOk,
             'checked_at' => time(),
         ));
         delete_transient('optimasite_product_info');
@@ -109,6 +120,7 @@ final class OptimaSite_License
         }
         delete_option(self::KEY_OPT);
         delete_option(self::STATE_OPT);
+        OptimaSite_Guard::clear_secret();
         do_action('optimasite_deactivated');
         return array('ok' => true);
     }
@@ -123,17 +135,20 @@ final class OptimaSite_License
         }
         $r = OptimaSite_Api::validate($key);
         $valid = !empty($r['ok']) && ($r['license_status'] ?? '') === 'active';
+        $licOk = OptimaSite_Guard::verify_signed($r);
         $prev = self::state();
         $st = array(
             'valid'    => $valid,
             'status'   => $r['license_status'] ?? 'unknown',
             'domain'   => OptimaSite_Api::current_domain(),
             'key_tail' => $prev['key_tail'] ?? substr($key, -4),
+            'lic_ok'   => $licOk,
             'checked_at' => time(),
         );
         update_option(self::STATE_OPT, $st);
         if (!empty($prev['valid']) && !$valid) {
             do_action('optimasite_invalid');
+            OptimaSite_Guard::clear_secret();
         }
         return $st;
     }

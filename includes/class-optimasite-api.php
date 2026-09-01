@@ -130,4 +130,21 @@ final class OptimaSite_Api
             'domain'  => $domain,
         ), 'POST');
     }
+
+    /**
+     * Anti-crack heartbeat. Signs the report body with the per license secret
+     * using the same canonical (sorted) form the platform verifies, so a live
+     * install can authenticate and cross-check its package fingerprint.
+     */
+    public static function guard(array $body): array
+    {
+        $secret = OptimaSite_Guard::secret();
+        if ($secret !== '') {
+            ksort($body);
+            $body['sig'] = hash_hmac('sha256', (string) wp_json_encode($body), $secret);
+        } else {
+            $body['sig'] = '';
+        }
+        return self::request('/api/license.php?action=guard', $body, 'POST');
+    }
 }
